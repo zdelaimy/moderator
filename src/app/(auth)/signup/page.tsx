@@ -1,7 +1,7 @@
 'use client';
 
 import { Suspense, useState } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase';
 import type { UserRole } from '@/types';
@@ -15,7 +15,6 @@ export default function SignupPage() {
 }
 
 function SignupForm() {
-  const router = useRouter();
   const searchParams = useSearchParams();
   const defaultRole = searchParams.get('role') === 'employer' ? 'employer' : 'candidate';
 
@@ -26,6 +25,7 @@ function SignupForm() {
   const [role, setRole] = useState<UserRole>(defaultRole);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [submitted, setSubmitted] = useState(false);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -34,9 +34,13 @@ function SignupForm() {
 
     const supabase = createClient();
 
-    const { data: authData, error: authError } = await supabase.auth.signUp({
+    const { error: authError } = await supabase.auth.signUp({
       email,
       password,
+      options: {
+        data: { first_name: firstName, last_name: lastName, role },
+        emailRedirectTo: `${window.location.origin}/auth/callback`,
+      },
     });
 
     if (authError) {
@@ -45,63 +49,12 @@ function SignupForm() {
       return;
     }
 
-    const userId = authData.user?.id;
-    if (!userId) {
-      setError('Signup succeeded but no user ID returned.');
-      setLoading(false);
-      return;
-    }
+    setSubmitted(true);
+    setLoading(false);
+  }
 
-    // Create base profile
-    const { data: profile, error: profileError } = await supabase
-      .from('profiles')
-      .insert({ user_id: userId, role, first_name: firstName, last_name: lastName, email })
-      .select()
-      .single();
-
-    if (profileError) {
-      setError(profileError.message);
-      setLoading(false);
-      return;
-    }
-
-    // Create role-specific profile
-    if (role === 'candidate') {
-      const { error: candError } = await supabase
-        .from('candidate_profiles')
-        .insert({ id: profile.id });
-
-      if (candError) {
-        setError(candError.message);
-        setLoading(false);
-        return;
-      }
-    } else if (role === 'employer') {
-      const { data: company, error: compError } = await supabase
-        .from('companies')
-        .insert({ name: `${firstName} ${lastName}'s Company` })
-        .select()
-        .single();
-
-      if (compError) {
-        setError(compError.message);
-        setLoading(false);
-        return;
-      }
-
-      const { error: empError } = await supabase
-        .from('employer_profiles')
-        .insert({ id: profile.id, company_id: company.id });
-
-      if (empError) {
-        setError(empError.message);
-        setLoading(false);
-        return;
-      }
-    }
-
-    router.push('/dashboard/profile');
-    router.refresh();
+  if (submitted) {
+    return <ConfirmationScreen email={email} />;
   }
 
   return (
@@ -212,5 +165,73 @@ function SignupForm() {
         </Link>
       </p>
     </>
+  );
+}
+
+function ConfirmationScreen({ email }: { email: string }) {
+  const [resending, setResending] = useState(false);
+  const [resent, setResent] = useState(false);
+
+  async function handleResend() {
+    setResending(true);
+    const supabase = createClient();
+    await supabase.auth.resend({
+      type: 'signup',
+      email,
+      options: {
+        emailRedirectTo: `${window.location.origin}/auth/callback`,
+      },
+    });
+    setResent(true);
+    setResending(false);
+  }
+
+  return (
+    <div className="text-center">
+      <div className="flex items-center justify-center mb-6">
+        <div className="w-12 h-12 border border-primary/40 flex items-center justify-center">
+          <svg className="w-6 h-6 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+            <path strokeLinecap="square" strokeLinejoin="miter" d="M21.75 6.75v10.5a2.25 2.25 0 01-2.25 2.25h-15a2.25 2.25 0 01-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25m19.5 0v.243a2.25 2.25 0 01-1.07 1.916l-7.5 4.615a2.25 2.25 0 01-2.36 0L3.32 8.91a2.25 2.25 0 01-1.07-1.916V6.75" />
+          </svg>
+        </div>
+      </div>
+
+      <div className="flex items-center gap-3 mb-4">
+        <div className="h-px flex-1 bg-border" />
+        <h2 className="text-xs font-mono text-muted tracking-[0.3em] uppercase">Verify Your Email</h2>
+        <div className="h-px flex-1 bg-border" />
+      </div>
+
+      <p className="text-sm text-foreground-dim mb-2">
+        We sent a confirmation link to
+      </p>
+      <p className="text-sm font-medium text-foreground mb-6">
+        {email}
+      </p>
+      <p className="text-sm text-muted mb-8">
+        Click the link in the email to activate your account. The link will expire in 24 hours.
+      </p>
+
+      <div className="space-y-4">
+        <button
+          onClick={handleResend}
+          disabled={resending || resent}
+          className="w-full py-3 px-4 border border-border text-sm font-medium text-foreground-dim hover:border-border-light disabled:opacity-50 transition-colors"
+        >
+          {resent ? 'Email Resent' : resending ? 'Sending...' : 'Resend Confirmation Email'}
+        </button>
+
+        <Link
+          href="/login"
+          className="block w-full py-3 px-4 bg-primary text-white text-sm font-medium text-center tracking-wide uppercase hover:bg-primary-light transition-colors"
+        >
+          Back to Login
+        </Link>
+      </div>
+
+      <p className="mt-6 text-xs text-muted">
+        Check your spam folder if you don&apos;t see the email.
+      </p>
+    </div>
   );
 }
