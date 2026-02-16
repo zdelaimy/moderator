@@ -87,3 +87,45 @@ export interface Application {
   job?: Job;
   candidate?: CandidateProfile;
 }
+
+// Phase 2: Verification & Compliance
+export type VerificationStatus = 'pending' | 'verified' | 'rejected';
+export type ComplianceStatus = 'pending' | 'approved' | 'rejected';
+
+export interface CertificationDocument {
+  id: string;
+  candidate_id: string;
+  certification_type: Certification;
+  document_url: string;
+  status: VerificationStatus;
+  expiration_date?: string;
+  verified_by?: string;
+  verified_at?: string;
+  rejection_reason?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ComplianceRequirement {
+  id: string;
+  job_id: string;
+  name: string;
+  description?: string;
+  required: boolean;
+  created_at: string;
+}
+
+export interface ComplianceSubmission {
+  id: string;
+  requirement_id: string;
+  application_id: string;
+  document_url: string;
+  status: ComplianceStatus;
+  reviewed_by?: string;
+  reviewed_at?: string;
+  rejection_reason?: string;
+  created_at: string;
+  updated_at: string;
+  // joined
+  requirement?: ComplianceRequirement;
+}
