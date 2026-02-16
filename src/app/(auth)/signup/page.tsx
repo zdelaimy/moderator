@@ -61,7 +61,7 @@ function SignupForm() {
     <>
       <div className="flex items-center gap-3 mb-8">
         <div className="h-px flex-1 bg-border" />
-        <h2 className="text-xs font-mono text-muted tracking-[0.3em] uppercase">Request Access</h2>
+        <h2 className="text-xs font-mono text-muted tracking-[0.3em] uppercase">Sign Up</h2>
         <div className="h-px flex-1 bg-border" />
       </div>
       {error && (

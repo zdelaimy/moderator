@@ -19,10 +19,18 @@ export default async function ApplicationsPage() {
     .eq('user_id', user!.id)
     .single();
 
+  if (!profile) {
+    return (
+      <div className="text-center py-12">
+        <p className="text-muted">Your profile is still being set up. Please check back shortly.</p>
+      </div>
+    );
+  }
+
   const { data: applications } = await supabase
     .from('applications')
     .select('*, job:jobs(*, company:companies(name))')
-    .eq('candidate_id', profile!.id)
+    .eq('candidate_id', profile.id)
     .order('created_at', { ascending: false });
 
   return (

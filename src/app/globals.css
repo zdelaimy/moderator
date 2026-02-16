@@ -124,6 +124,13 @@ body {
   background-clip: text;
 }
 
+/* Hero gradient backdrop */
+.hero-gradient-bg {
+  background: radial-gradient(ellipse at 30% 30%, rgba(166, 126, 30, 0.3) 0%, transparent 60%),
+              radial-gradient(ellipse at 70% 60%, rgba(139, 105, 20, 0.2) 0%, transparent 50%),
+              radial-gradient(ellipse at 50% 80%, rgba(111, 84, 16, 0.15) 0%, transparent 40%);
+}
+
 /* Subtle glow */
 .glow-gold {
   box-shadow: 0 0 40px rgba(139, 105, 20, 0.06), 0 0 80px rgba(139, 105, 20, 0.03);
